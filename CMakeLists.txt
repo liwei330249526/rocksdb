@@ -1227,9 +1227,11 @@ if(WITH_CORE_TOOLS OR WITH_TOOLS)
   add_custom_target(core_tools
     DEPENDS ${core_tool_deps})
 endif()
-
+add_subdirectory(application)
 if(WITH_TOOLS)
   add_subdirectory(db_stress_tool)
   add_custom_target(tools
     DEPENDS ${tool_deps})
 endif()
+
+
