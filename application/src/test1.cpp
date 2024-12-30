@@ -8,7 +8,7 @@ int main() {
   options.create_if_missing = true;
 
   // 打开数据库
-  rocksdb::Status status = rocksdb::DB::Open(options, "/tmp/testdb", &db);
+  rocksdb::Status status = rocksdb::DB::Open(options, "./testdb", &db);
   if (!status.ok()) {
     std::cerr << "无法打开数据库: " << status.ToString() << std::endl;
     return -1;
@@ -16,6 +16,12 @@ int main() {
 
   // 插入键值对
   status = db->Put(rocksdb::WriteOptions(), "key1", "value1");
+  if (!status.ok()) {
+    std::cerr << "插入失败: " << status.ToString() << std::endl;
+    delete db;
+    return -1;
+  }
+  status = db->Put(rocksdb::WriteOptions(), "key2", "value2");
   if (!status.ok()) {
     std::cerr << "插入失败: " << status.ToString() << std::endl;
     delete db;

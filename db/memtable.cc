@@ -260,7 +260,7 @@ Slice MemTableRep::UserKey(const char* key) const {
   return Slice(slice.data(), slice.size() - 8);
 }
 
-KeyHandle MemTableRep::Allocate(const size_t len, char** buf) {
+KeyHandle MemTableRep::Allocate(const size_t len, char** buf) { // [->][->]  [  ]
   *buf = allocator_->Allocate(len);
   return static_cast<KeyHandle>(*buf);
 }
@@ -477,26 +477,26 @@ bool MemTable::Add(SequenceNumber s, ValueType type,
   //  key bytes    : char[internal_key.size()]
   //  value_size   : varint32 of value.size()
   //  value bytes  : char[value.size()]
-  uint32_t key_size = static_cast<uint32_t>(key.size());
-  uint32_t val_size = static_cast<uint32_t>(value.size());
-  uint32_t internal_key_size = key_size + 8;
+  uint32_t key_size = static_cast<uint32_t>(key.size()); // key 长度
+  uint32_t val_size = static_cast<uint32_t>(value.size()); // val 长度
+  uint32_t internal_key_size = key_size + 8;  // seq + type
   const uint32_t encoded_len = VarintLength(internal_key_size) +
                                internal_key_size + VarintLength(val_size) +
                                val_size;
-  char* buf = nullptr;
+  char* buf = nullptr; // [->]
   std::unique_ptr<MemTableRep>& table =
       type == kTypeRangeDeletion ? range_del_table_ : table_;
-  KeyHandle handle = table->Allocate(encoded_len, &buf);
+  KeyHandle handle = table->Allocate(encoded_len, &buf); // 分配内存 buf
 
-  char* p = EncodeVarint32(buf, internal_key_size);
-  memcpy(p, key.data(), key_size);
+  char* p = EncodeVarint32(buf, internal_key_size); // interval size
+  memcpy(p, key.data(), key_size); // key
   Slice key_slice(p, key_size);
   p += key_size;
-  uint64_t packed = PackSequenceAndType(s, type);
+  uint64_t packed = PackSequenceAndType(s, type); // seq + type
   EncodeFixed64(p, packed);
   p += 8;
-  p = EncodeVarint32(p, val_size);
-  memcpy(p, value.data(), val_size);
+  p = EncodeVarint32(p, val_size); // val size
+  memcpy(p, value.data(), val_size); // val
   assert((unsigned)(p + val_size - buf) == (unsigned)encoded_len);
   size_t ts_sz = GetInternalKeyComparator().user_comparator()->timestamp_size();
 
@@ -505,12 +505,13 @@ bool MemTable::Add(SequenceNumber s, ValueType type,
     if (insert_with_hint_prefix_extractor_ != nullptr &&
         insert_with_hint_prefix_extractor_->InDomain(key_slice)) {
       Slice prefix = insert_with_hint_prefix_extractor_->Transform(key_slice);
+      // 带hint插入，通过map记录一些前缀插入skiplist的位置，从而再次插入相同前缀的key时快速找到位置
       bool res = table->InsertKeyWithHint(handle, &insert_hints_[prefix]);
       if (UNLIKELY(!res)) {
         return res;
       }
     } else {
-      bool res = table->InsertKey(handle);
+      bool res = table->InsertKey(handle); // 插入跳表， handle 是内存指针，存储了 key val 的信息
       if (UNLIKELY(!res)) {
         return res;
       }
@@ -518,6 +519,7 @@ bool MemTable::Add(SequenceNumber s, ValueType type,
 
     // this is a bit ugly, but is the way to avoid locked instructions
     // when incrementing an atomic
+    // 统计信息
     num_entries_.store(num_entries_.load(std::memory_order_relaxed) + 1,
                        std::memory_order_relaxed);
     data_size_.store(data_size_.load(std::memory_order_relaxed) + encoded_len,
@@ -526,7 +528,7 @@ bool MemTable::Add(SequenceNumber s, ValueType type,
       num_deletes_.store(num_deletes_.load(std::memory_order_relaxed) + 1,
                          std::memory_order_relaxed);
     }
-
+    // 更新布隆过滤
     if (bloom_filter_ && prefix_extractor_ &&
         prefix_extractor_->InDomain(key)) {
       bloom_filter_->Add(prefix_extractor_->Transform(key));

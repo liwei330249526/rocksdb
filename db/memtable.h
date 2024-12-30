@@ -81,7 +81,7 @@ using MultiGetRange = MultiGetContext::Range;
 // written to (aka the 'immutable memtables').
 class MemTable {
  public:
-  struct KeyComparator : public MemTableRep::KeyComparator {
+  struct KeyComparator : public MemTableRep::KeyComparator { // 用于比较key 的大小
     const InternalKeyComparator comparator;
     explicit KeyComparator(const InternalKeyComparator& c) : comparator(c) { }
     virtual int operator()(const char* prefix_len_key1,
@@ -452,13 +452,13 @@ class MemTable {
   friend class MemTableBackwardIterator;
   friend class MemTableList;
 
-  KeyComparator comparator_;
+  KeyComparator comparator_; // 比较key 的大小
   const ImmutableMemTableOptions moptions_;
   int refs_;
   const size_t kArenaBlockSize;
   AllocTracker mem_tracker_;
   ConcurrentArena arena_;
-  std::unique_ptr<MemTableRep> table_;
+  std::unique_ptr<MemTableRep> table_; // 指向跳表
   std::unique_ptr<MemTableRep> range_del_table_;
   std::atomic_bool is_range_del_table_empty_;
 
@@ -499,7 +499,7 @@ class MemTable {
   std::vector<port::RWMutex> locks_;
 
   const SliceTransform* const prefix_extractor_;
-  std::unique_ptr<DynamicBloom> bloom_filter_;
+  std::unique_ptr<DynamicBloom> bloom_filter_; // 布隆过滤器
 
   std::atomic<FlushStateEnum> flush_state_;
 
